@@ -1,0 +1,141 @@
+<modification>
+    <id>send_sms</id>
+    <version>1.0.2</version>
+    <vqmver>2.0.1</vqmver>
+    <author>richbnaks7</author>
+
+    <file name="admin/model/sale/order.php">
+        <operation>
+            <search position="before"><![CDATA[class ModelSaleOrder extends Model {]]> </search>
+            <add><![CDATA[require_once(DIR_SYSTEM . 'library/IntelliSMS.php');]]></add>
+        </operation>
+
+        <operation>
+            <search position="before"><![CDATA[if ($data['notify']) {]]> </search>
+            <add><![CDATA[if ($data['sms']) {
+                $objIntelliSMS = new IntelliSMS();
+
+                $mobile = $this->db->query("SELECT `" . DB_PREFIX . "order`.telephone FROM `" . DB_PREFIX . "order` WHERE `" . DB_PREFIX . "order`.order_id = '" . (int)$order_id . "'");
+
+                $num = $mobile->row['telephone'];
+
+                $mobile = substr($num, 0, 2);
+
+                if($mobile == '07'){
+                    $objIntelliSMS->SendMessage ( $num, $data['comment'], $order_info['store_name'] );
+                }
+                 
+                }
+
+                ]]></add>
+        </operation>
+    </file>
+
+    <file name="admin/language/english/sale/order.php">
+        <operation>
+            <search position="after"><![CDATA[$_['entry_notify']                            = 'Notify Customer:';]]> </search>
+            <add><![CDATA[$_['entry_notify_sms']                            = 'Notify Customer by SMS:';]]></add>
+        </operation>
+
+        <operation>
+            <search position="replace"><![CDATA[$_['entry_notify']                            = 'Notify Customer:';]]> </search>
+            <add><![CDATA[$_['entry_notify']                            = 'Notify Customer by Email:';]]></add>
+        </operation>
+    </file> 
+
+    <file name="admin/controller/sale/order.php">
+        <operation>
+            <search position="after"><![CDATA[$this->data['entry_notify'] = $this->language->get('entry_notify');]]> </search>
+            <add><![CDATA[$this->data['entry_notify_sms'] = $this->language->get('entry_notify_sms');]]></add>
+        </operation>
+    </file>
+
+    <file name="admin/view/template/sale/order_info.tpl">
+        <operation>
+            <search position="before"><![CDATA[<td><?php echo $entry_comment; ?></td>]]> </search>
+            <add><![CDATA[<tr>
+                                <td><?php echo $entry_notify_sms; ?></td>
+                                <td><input type="checkbox" name="sms" value="1" /></td>
+                        </tr>]]></add>
+        </operation>
+
+        <operation>
+            <search position="replace"><![CDATA['order_status_id=' + encodeURIComponent($('select[name=\'order_status_id\']').val()) + '&notify=' + encodeURIComponent($('input[name=\'notify\']').attr('checked') ? 1 : 0) + '&append=' + encodeURIComponent($('input[name=\'append\']').attr('checked') ? 1 : 0) + '&comment=' + encodeURIComponent($('textarea[name=\'comment\']').val())]]> </search>
+            <add><![CDATA['order_status_id=' + encodeURIComponent($('select[name=\'order_status_id\']').val()) + '&notify=' + encodeURIComponent($('input[name=\'notify\']').attr('checked') ? 1 : 0) + '&sms=' + encodeURIComponent($('input[name=\'sms\']').attr('checked') ? 1 : 0) + '&append=' + encodeURIComponent($('input[name=\'append\']').attr('checked') ? 1 : 0) + '&comment=' + encodeURIComponent($('textarea[name=\'comment\']').val())]]>
+            </add>
+        </operation>
+    </file> 
+
+<!-- show balance on admin home -->
+    <file name="admin/language/english/common/home.php">
+        <operation>
+            <search position="after"><![CDATA[$_['text_total_affiliate_approval'] = 'Affiliates Awaiting Approval:';]]> </search>
+            <add><![CDATA[$_['text_total_sms_balance'] = 'SMS Credits Remaining:';]]>
+            </add>
+        </operation>
+    </file>
+
+    <file name="admin/controller/common/home.php">
+        <operation>
+            <search position="after"><![CDATA[$this->data['text_total_affiliate_approval'] = $this->language->get('text_total_affiliate_approval');]]> </search>
+            <add><![CDATA[$this->data['text_total_sms_balance'] = $this->language->get('text_total_sms_balance');]]>
+            </add>
+        </operation>
+    </file>
+
+    <file name="admin/view/template/common/home.tpl">
+        <operation>
+            <search position="after"><![CDATA[<td><?php echo $total_affiliate_approval; ?></td>
+            ]]> </search>
+            <add><![CDATA[<tr>
+                        <td><?php echo $text_total_sms_balance; ?></td>
+                        <td><?php echo $total_sms_balance; ?></td>
+                    </tr>]]>
+            </add>
+        </operation>
+    </file>
+
+    <file name="admin/controller/common/home.php">
+        <operation>
+            <search position="after"><![CDATA[$this->data['total_affiliate_approval'] = $this->model_sale_affiliate->getTotalAffiliatesAwaitingApproval();]]> </search>
+            <add><![CDATA[$objIntelliSMS = new IntelliSMS();
+                $Results  = $objIntelliSMS->GetBalance();
+                $this->data['total_sms_balance'] = $Results["Balance"];]]>
+            </add>
+        </operation>
+    </file>
+<!--*************************-->
+
+<!--Send sms after order-->
+    <file name="catalog/model/checkout/order.php">
+        <operation>
+            <search position="before"><![CDATA[class ModelCheckoutOrder extends Model {]]> </search>
+            <add><![CDATA[require_once(DIR_SYSTEM . 'library/IntelliSMS.php');]]></add>
+        </operation>
+
+        <operation>
+            <search position="before"><![CDATA[// Admin Alert Mail]]> </search>
+            <add><![CDATA[$objIntelliSMS = new IntelliSMS();
+                
+                $smsnumber = $order_info['telephone'];
+
+                $mobile = substr($smsnumber, 0, 2);
+
+                $smsmsg = "Your order has been received. Your order number is ".$order_id.". Thank you. " . $order_info['store_name']. ".";
+
+                if($mobile == '07'){
+                    $objIntelliSMS->SendMessage ( $smsnumber, $smsmsg, $order_info['store_name'] );
+                }
+                ]]>
+            </add>
+        </operation>
+    </file>
+
+    <file name="catalog/language/english/checkout/checkout.php">
+        <operation>
+            <search position="replace"><![CDATA[$_['entry_telephone']                = 'Telephone:';]]> </search>
+            <add><![CDATA[$_['entry_telephone']                = 'Telephone (<i>Enter mobile for SMS updates</i>):';]]></add>
+        </operation>
+    </file>
+<!--********************-->
+</modification>
